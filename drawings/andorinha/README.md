@@ -1,7 +1,8 @@
 # Andorinha no salgueiro
 
 Uma andorinha-das-chaminés pousada num ramo de salgueiro, a olhar para outra que ainda voa,
-pintada em sumi-e (tinta sobre papel xuan) com o motor anidoodle. Tudo é código: cada pincelada
+pintada em sumi-e (tinta sobre papel xuan) com toques leves de cor, à maneira da pintura de
+aves e flores: castanho na garganta, azul-aço no dorso, verde de primavera no salgueiro. Tudo é código: cada pincelada
 é uma função, sem imagens geradas.
 
 ![andorinha](andorinha.png)

@@ -1,5 +1,6 @@
 import { Gfx, rng, fractal, type Ctx, type Env, type Medium, type P } from "./core";
 import type { Film } from "./film";
+import { bounds, smooth } from "./gallery";
 import { brush, JIAO, NONG, ZHONG, DAN, QING, type Brush } from "./sumiEKit";
 
 // ANDORINHA NO SALGUEIRO · sumi-e (ink on xuan paper), one still.
@@ -13,6 +14,9 @@ import { brush, JIAO, NONG, ZHONG, DAN, QING, type Brush } from "./sumiEKit";
 // is the seal); a dark breast band; pale buff underparts; long, pointed folded wings whose tips
 // cross past the rump; a deeply forked tail whose outer streamers run well beyond the wingtips;
 // tiny legs, short toes. In flight: scythe wings swept back, the fork open.
+// COLOUR: ink-and-colour (淡彩), the way bird-and-flower painters touch in colour: pale washes
+// laid loosely off the ink, never filling a line: chestnut on the throat and brow, a breath of
+// steel blue on the back's gloss, buff on the belly, spring green under the willow leaves.
 // ORDER (the Mustard Seed Garden order): the bough first, then the hanging willow strands
 // behind and in front, the willow leaves in quick pressed flicks, then the bird (beak, eye,
 // head, throat, back, wings, tail, belly, feet), the far swallow, and the seal last.
@@ -48,13 +52,16 @@ const BOUGH: Brush[] = [
 // hanging strands: a long falling stroke each, light ink behind, heavier in front
 type Strand = { ctrl: P[]; w: number; ink: number; seed: number };
 const STRANDS: Strand[] = [
-  { ctrl: [[1000, 480], [1006, 620], [1000, 780], [984, 940], [970, 1090]], w: 4, ink: DAN, seed: 40 },
-  { ctrl: [[930, 500], [944, 650], [946, 800], [936, 930]], w: 3.6, ink: QING, seed: 41 },
-  { ctrl: [[1060, 476], [1074, 640], [1078, 820], [1070, 1000]], w: 3.4, ink: QING, seed: 42 },
-  { ctrl: [[860, 540], [850, 680], [846, 820], [852, 960], [862, 1080]], w: 4.4, ink: ZHONG, seed: 43 },
-  { ctrl: [[760, 572], [746, 700], [744, 820], [752, 900]], w: 3.6, ink: DAN, seed: 44 },
-  { ctrl: [[1080, 0], [1060, 140], [1048, 300], [1052, 470]], w: 3.4, ink: QING, seed: 45 },
-  { ctrl: [[960, -10], [946, 120], [940, 260], [946, 380]], w: 3.4, ink: DAN, seed: 46 },
+  { ctrl: [[1000, 480], [1012, 620], [1004, 780], [978, 940], [962, 1090]], w: 4, ink: DAN, seed: 40 },
+  { ctrl: [[930, 500], [948, 650], [944, 800], [926, 930]], w: 3.6, ink: QING, seed: 41 },
+  { ctrl: [[1060, 476], [1078, 640], [1074, 820], [1058, 1000]], w: 3.4, ink: QING, seed: 42 },
+  { ctrl: [[860, 540], [846, 680], [848, 820], [866, 960], [872, 1080]], w: 4.4, ink: ZHONG, seed: 43 },
+  { ctrl: [[760, 572], [742, 700], [746, 820], [762, 900], [770, 960]], w: 3.6, ink: DAN, seed: 44 },
+  { ctrl: [[1080, 0], [1058, 140], [1050, 300], [1060, 470]], w: 3.4, ink: QING, seed: 45 },
+  { ctrl: [[960, -10], [940, 120], [938, 260], [952, 400], [956, 440]], w: 3.4, ink: DAN, seed: 46 },
+  { ctrl: [[1020, -10], [1004, 160], [1000, 330], [1012, 460]], w: 3.8, ink: ZHONG, seed: 47 },
+  { ctrl: [[680, 596], [668, 700], [674, 790], [690, 850]], w: 3, ink: QING, seed: 48 },
+  { ctrl: [[960, 506], [976, 640], [974, 760], [960, 880], [948, 1000]], w: 4, ink: ZHONG, seed: 49 },
 ];
 const strand = (s: Strand): Brush => ({ ctrl: s.ctrl, w: s.w, ink: s.ink, press: [[0, 1], [0.6, 0.8], [1, 0.25]], load: 1, dry: 0.12, edge: 0, split: 0.3, bleed: 0.5, slow: [[0.01, 0.4]], hairs: 8, seed: s.seed });
 // a willow leaf: narrow, lanceolate, one quick press-and-lift hanging off the strand
@@ -70,14 +77,14 @@ const strandLeaves = (s: Strand, count: number, from: number, to: number): Brush
     const t = from + ((to - from) * (i + r() * 0.5)) / count, seg = Math.min(s.ctrl.length - 2, Math.floor(t * (s.ctrl.length - 1))), f = t * (s.ctrl.length - 1) - seg;
     const p: P = [s.ctrl[seg][0] + (s.ctrl[seg + 1][0] - s.ctrl[seg][0]) * f, s.ctrl[seg][1] + (s.ctrl[seg + 1][1] - s.ctrl[seg][1]) * f];
     const side = r() < 0.5 ? 1 : -1, ang = 90 + side * (8 + r() * 38) + 12;
-    out.push(leaf(p, ang, 30 + r() * 30, 6.5 + r() * 4, Math.min(1, s.ink + 0.08 + r() * 0.08), s.seed * 100 + i));
+    out.push(leaf(p, ang, 36 + r() * 30, 6 + r() * 3.5, Math.min(1, s.ink + 0.08 + r() * 0.08), s.seed * 100 + i));
   }
   return out;
 };
 const LEAVES: Brush[] = [
-  ...strandLeaves(STRANDS[1], 9, 0.1, 0.95), ...strandLeaves(STRANDS[2], 8, 0.1, 0.95), ...strandLeaves(STRANDS[5], 7, 0.2, 1),
-  ...strandLeaves(STRANDS[0], 12, 0.1, 0.98), ...strandLeaves(STRANDS[4], 7, 0.15, 1), ...strandLeaves(STRANDS[6], 6, 0.25, 1),
-  ...strandLeaves(STRANDS[3], 13, 0.08, 0.98),
+  ...strandLeaves(STRANDS[1], 11, 0.1, 0.98), ...strandLeaves(STRANDS[2], 11, 0.1, 0.98), ...strandLeaves(STRANDS[5], 9, 0.2, 1), ...strandLeaves(STRANDS[8], 6, 0.2, 1),
+  ...strandLeaves(STRANDS[0], 15, 0.08, 1), ...strandLeaves(STRANDS[4], 10, 0.12, 1), ...strandLeaves(STRANDS[6], 9, 0.2, 1),
+  ...strandLeaves(STRANDS[3], 17, 0.06, 1), ...strandLeaves(STRANDS[7], 12, 0.15, 1), ...strandLeaves(STRANDS[9], 14, 0.08, 1),
   // a few leaves straight off the bough, near the bird, in heavy ink
   leaf([700, 590], 104, 50, 9, ZHONG, 300), leaf([706, 592], 128, 44, 8.5, ZHONG, 301), leaf([620, 612], 96, 42, 8, DAN, 302),
   leaf([380, 660], 118, 46, 8, ZHONG, 303), leaf([372, 664], 92, 40, 7.5, DAN, 304), leaf([320, 682], 136, 42, 7.5, ZHONG, 305),
@@ -86,9 +93,9 @@ const LEAVES: Brush[] = [
 // ---------------------------------------------------------------- the swallow
 // Authored in its own frame: origin where the toes grip the bough, x toward the tail, y up is
 // negative, facing LEFT. The body sits about 30 degrees off horizontal, tail down to the right.
-const PERCH: P = [560, 622];
-const S = 2.5;
-const LOWER = 4.5; // the body settles onto the bough: everything but the feet sits this much lower than authored
+const PERCH: P = [522, 630];
+const S = 3.1;
+const LOWER = 7; // the body settles onto the bough: everything but the feet sits this much lower than authored
 const sp = (pts: [number, number][], dy = LOWER): P[] => pts.map(([x, y]) => [PERCH[0] + x * S, PERCH[1] + (y + dy) * S]);
 const bird = (ink: number, ctrl: [number, number][], w: number, press: [number, number][], seed: number, o: Partial<Brush> = {}): Brush => ({ ctrl: sp(ctrl), w: w * S, ink, press, load: 1, dry: 0.16, edge: 0, split: 0.4, bleed: 0.5, slow: [[0.02, 0.4]], hairs: Math.max(8, Math.round(w * S * 1.1)), seed, ...o });
 const SWALLOW: Brush[] = [
@@ -103,7 +110,7 @@ const SWALLOW: Brush[] = [
   bird(ZHONG, [[-35.8, -52.6], [-34, -53.6], [-32.2, -54.2]], 2.2, [[0, 0.7], [0.5, 1], [1, 0.4]], 704, { dry: 0.1, bleed: 0.6, hairs: 8 }),
   bird(ZHONG, [[-36.2, -47], [-34.5, -43.5], [-31, -40.2], [-27, -38.8]], 5.5, [[0, 0.6], [0.3, 1], [0.8, 0.9], [1, 0.4]], 705, { dry: 0.15, bleed: 0.8, slow: [[0.1, 0.6]], wet: 0.25 }),
   // the dark cheek: the cap runs down behind the eye to meet the breast band
-  bird(NONG, [[-27, -51], [-26, -46], [-24.5, -41], [-23, -37.5]], 4, [[0, 0.6], [0.4, 1], [1, 0.5]], 708, { dry: 0.3, streak: true, split: 0.7, bleed: 0.5 }),
+  bird(NONG, [[-29.5, -54], [-27.5, -49], [-25.5, -43], [-23.5, -38]], 5, [[0, 0.6], [0.4, 1], [1, 0.5]], 708, { dry: 0.3, streak: true, split: 0.7, bleed: 0.5 }),
   // the dark breast band: a side-pressed stroke of thick ink across the chest below the throat
   bird(NONG, [[-31.5, -38.4], [-27, -36.4], [-22, -36], [-18, -37.5]], 4, [[0, 0.5], [0.4, 1], [1, 0.3]], 706, { dry: 0.35, streak: true, split: 0.7, bleed: 0.5 }),
   // the back: the brush on its side, from nape to rump, breaking into dry streaks: the gloss
@@ -120,8 +127,8 @@ const SWALLOW: Brush[] = [
   bird(JIAO, [[17, -27], [32, -12], [48, 4], [62, 18], [72, 30]], 1.4, [[0, 1], [0.3, 0.7], [1, 0.03]], 717, { dry: 0.1, split: 0.3, bleed: 0.2, slow: [], hairs: 6 }),
   // the breast and belly: one pale hairline down the front, then one clear wash along the
   // underside away from the light; the rest of the belly is bare paper
-  bird(DAN, [[-26.5, -35], [-24, -26], [-18.5, -17.5], [-11, -12.5]], 1.2, [[0, 0.3], [0.5, 1], [1, 0.2]], 718, { dry: 0.1, bleed: 0.3, slow: [], hairs: 5 }),
-  bird(QING, [[-20, -14.5], [-8, -10.5], [4, -11.5], [14, -17], [20, -24]], 5.5, [[0, 0.35], [0.2, 1], [0.75, 0.8], [1, 0.2]], 719, { load: 1, dry: 0.5, streak: true, edge: -0.2, split: 0.8, bleed: 1.1, slow: [[0.04, 1]] }),
+  bird(DAN, [[-26.5, -35], [-24, -27], [-19, -20], [-12, -15.5]], 1.2, [[0, 0.3], [0.5, 1], [1, 0.2]], 718, { dry: 0.1, bleed: 0.3, slow: [], hairs: 5 }),
+  bird(QING, [[-19, -17.5], [-8, -14.5], [4, -15.5], [14, -20], [20, -25.5]], 5, [[0, 0.35], [0.2, 1], [0.75, 0.8], [1, 0.2]], 719, { load: 1, dry: 0.5, streak: true, edge: -0.2, split: 0.8, bleed: 1.1, slow: [[0.04, 1]] }),
   // the undertail, a dry touch under the rump where the streamers leave the body
   bird(DAN, [[8, -14], [14, -18], [19, -24.5]], 3, [[0, 0.4], [0.5, 1], [1, 0.3]], 720, { dry: 0.7, streak: true, split: 0.9, bleed: 0.3 }),
 ];
@@ -133,14 +140,17 @@ const FEET: Brush[] = [
 ];
 
 // the far swallow: high in the empty sky, light ink, scythe wings swept back, fork open
-const FAR: P = [300, 250];
-const far = (ink: number, ctrl: [number, number][], w: number, press: [number, number][], seed: number): Brush => ({ ctrl: ctrl.map(([x, y]) => [FAR[0] + x, FAR[1] + y] as P), w, ink, press, load: 1, dry: 0.2, edge: 0, split: 0.4, bleed: 0.4, slow: [[0.02, 0.4]], hairs: 10, seed });
-const FLYER: Brush[] = [
-  far(ZHONG, [[0, 0], [-12, -10], [-30, -22], [-52, -28]], 6, [[0, 1], [0.3, 0.9], [1, 0.03]], 800),   // the far wing, swept up and back
-  far(ZHONG, [[2, 2], [16, -2], [34, -12], [58, -16]], 6.5, [[0, 1], [0.3, 0.9], [1, 0.03]], 801),      // the near wing
-  far(NONG, [[-6, 2], [0, 0.5], [6, 2.5], [10, 5]], 6, [[0, 0.8], [0.4, 1], [1, 0.5]], 802),             // head and body
-  far(DAN, [[9, 5], [16, 14], [20, 26]], 1.5, [[0, 1], [1, 0.05]], 803), far(DAN, [[9, 5], [12, 15], [10, 27]], 1.4, [[0, 1], [1, 0.05]], 804), // the forked tail
-];
+const flyer = (at: P, k: number, flip: number, ink: number, seed: number): Brush[] => {
+  const far = (dk: number, ctrl: [number, number][], w: number, press: [number, number][], s: number): Brush => ({ ctrl: ctrl.map(([x, y]) => [at[0] + x * k * flip, at[1] + y * k] as P), w: w * k, ink: Math.min(1, ink + dk), press, load: 1, dry: 0.2, edge: 0, split: 0.4, bleed: 0.4, slow: [[0.02, 0.4]], hairs: 10, seed: seed + s });
+  return [
+    far(0, [[0, 0], [-12, -10], [-30, -22], [-52, -28]], 6, [[0, 1], [0.3, 0.9], [1, 0.03]], 0),   // the far wing, swept up and back
+    far(0, [[2, 2], [16, -2], [34, -12], [58, -16]], 6.5, [[0, 1], [0.3, 0.9], [1, 0.03]], 1),      // the near wing
+    far(0.22, [[-6, 2], [0, 0.5], [6, 2.5], [10, 5]], 6, [[0, 0.8], [0.4, 1], [1, 0.5]], 2),         // head and body
+    far(-0.22, [[9, 5], [16, 14], [20, 26]], 1.5, [[0, 1], [1, 0.05]], 3), far(-0.22, [[9, 5], [12, 15], [10, 27]], 1.4, [[0, 1], [1, 0.05]], 4), // the forked tail
+  ];
+};
+// a pair still on the wing: the nearer one in heavy ink, the farther one smaller, paler, banking the other way
+const FLYERS: Brush[] = [...flyer([286, 236], 1.05, 1, ZHONG, 800), ...flyer([418, 318], 0.62, -1, DAN, 820)];
 
 // ---------------------------------------------------------------- the seal
 const SEAL = { x: 116, y: 880, s: 72 };
@@ -167,6 +177,23 @@ const seal = (g: Gfx) => {
   }, { blend: "multiply", alpha: 1, textures: ["risoSpeck"] });
 };
 
+// ---------------------------------------------------------------- the colour
+// a pale wash laid loosely off the ink, soft-edged where the wet colour met dry paper
+const tint = (g: Gfx, pts: P[], color: string, alpha: number, blur = 2.2) => g.group("plain", () => {
+  const k = g.cur, sh = smooth(pts, true, 8), b = bounds(sh); k.fillStyle = color; k.beginPath(); sh.forEach(([x, y], i) => (i ? k.lineTo(x, y) : k.moveTo(x, y))); k.closePath(); k.fill(); g.touch(b.x0 - 4, b.y0 - 4, b.x1 + 4, b.y1 + 4);
+}, { blend: "multiply", alpha, blur });
+// spring green under a leaf: a round stroke along it, nudged off the ink line as a painter's colour is
+const leafTint = (g: Gfx, b: Brush, i: number) => g.group("plain", () => {
+  const k = g.cur, sh = smooth(b.ctrl, false, 6).map(([x, y]) => [x + 1.2, y + 0.8] as P), bb = bounds(sh);
+  k.strokeStyle = i % 3 ? "#9cb86a" : "#7d9f62"; k.lineWidth = b.w * 0.95; k.lineCap = "round"; k.lineJoin = "round"; k.beginPath(); sh.forEach(([x, y], j) => (j ? k.lineTo(x, y) : k.moveTo(x, y))); k.stroke(); g.touch(bb.x0 - b.w, bb.y0 - b.w, bb.x1 + b.w, bb.y1 + b.w);
+}, { blend: "multiply", alpha: 0.22 + 0.32 * b.ink, blur: 2.2 });
+const birdColour = (g: Gfx) => {
+  tint(g, sp([[-37.5, -48.5], [-36.5, -44], [-33, -40.5], [-28, -39], [-24.5, -41], [-26, -45.5], [-30, -49], [-34, -50.5]]), "#a8482a", 0.62, 2.4); // the chestnut throat
+  tint(g, sp([[-37, -52], [-35.5, -54.3], [-33, -55], [-32.5, -53], [-35, -51.5]]), "#a8482a", 0.55, 1.6);                                         // and the brow over the bill
+  tint(g, sp([[-25, -34], [-16, -36], [0, -34], [12, -29], [16, -23], [6, -17.5], [-8, -15.5], [-18, -19], [-23, -26]]), "#e7cda0", 0.24, 5);           // buff belly
+  tint(g, sp([[-22, -56], [-6, -53], [12, -44], [24, -32], [16, -28], [0, -36], [-16, -44], [-24, -50]]), "#3e5f8a", 0.32, 3);                     // steel-blue gloss
+};
+
 export const drawAndorinha = (ctx: Ctx, _frame: number, env: Env) => {
   const g = new Gfx(ctx, env, 0, SUMI_M);
   ground(g);
@@ -177,9 +204,12 @@ export const drawAndorinha = (ctx: Ctx, _frame: number, env: Env) => {
   [1, 2, 5, 6, 0, 4].forEach((i) => brush(g, strand(STRANDS[i])));
   BOUGH.forEach((b) => brush(g, b));
   brush(g, strand(STRANDS[3]));
+  LEAVES.forEach((b, i) => leafTint(g, b, i));
   LEAVES.forEach((b) => brush(g, b));
+  tint(g, [[640, 600], [860, 536], [1090, 468], [1090, 486], [860, 556], [640, 616]], "#7a5a3c", 0.25, 2); // a little warmth in the bark
+  birdColour(g);
   [...SWALLOW, ...FEET].forEach((b) => brush(g, b));
-  FLYER.forEach((b) => brush(g, b));
+  FLYERS.forEach((b) => brush(g, b));
   seal(g);
   g.pop();
   g.paper("paper", 0.1); g.paper("coldpress", 0.045);
